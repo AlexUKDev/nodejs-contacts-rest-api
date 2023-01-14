@@ -8,6 +8,7 @@ const addContactSchema = Joi.object({
     .max(30)
     .required()
     .pattern(/^\+|\d[\s\d\-\(\)]*\$/),
+  favorite: Joi.boolean(),
 });
 
 const updateContactSchema = Joi.object({
@@ -17,9 +18,15 @@ const updateContactSchema = Joi.object({
     .min(3)
     .max(30)
     .pattern(/^\+|\d[\s\d\-\(\)]*\$/),
+  favorite: Joi.boolean(),
+});
+
+const updateStatusSchema = Joi.object({
+  favorite: Joi.boolean().required(),
 });
 
 module.exports = {
   addContactSchema,
   updateContactSchema,
+  updateStatusSchema,
 };
