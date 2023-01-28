@@ -8,6 +8,7 @@ const {
 } = require('./validationMiddleware');
 
 const { checkAuth } = require('./checkAuth');
+const { upload } = require('./uploadMiddleware');
 
 module.exports = {
   addContactValidation,
@@ -17,4 +18,5 @@ module.exports = {
   loginValidation,
   checkAuth,
   updateSubscriptionValidation,
+  upload,
 };
