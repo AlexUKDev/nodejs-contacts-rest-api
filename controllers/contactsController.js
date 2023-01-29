@@ -1,15 +1,6 @@
-const { Contact } = require('../models/contactModel');
+// const gravatar = require('gravatar');
 
-// const updateStatusContact = async (contactId, body) => {
-//   const contactDetail = await Contact.findByIdAndUpdate(
-//     contactId,
-//     {
-//       $set: body,
-//     },
-//     { new: true }
-//   );
-//   return contactDetail;
-// };
+const { Contact } = require('../models/contactModel');
 
 const getContactsList = async (req, res, next) => {
   const { _id } = req.user;
@@ -50,6 +41,7 @@ const getContactById = async (req, res, next) => {
 
 const addContact = async (req, res, next) => {
   const { _id } = req.user;
+
   try {
     const newContact = new Contact({ ...req.body, owner: _id });
     await newContact.save();
@@ -91,7 +83,6 @@ const updateContact = async (req, res, next) => {
 
 const updateStatus = async (req, res, next) => {
   const { id } = req.user;
-  // const { contactId } = req.params;
   const { body } = req;
 
   try {

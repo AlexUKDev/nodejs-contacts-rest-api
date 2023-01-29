@@ -1,7 +1,15 @@
+const gravatar = require('gravatar');
 const { Unauthorized } = require('http-errors');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+
 const { User } = require('../models/userModel');
+const { imgResize } = require('../helpers/imgResize');
+
+const path = require('path');
+const fs = require('fs/promises');
+
+const avatarsDir = path.join(__dirname, '../', 'public/avatars');
 
 const userRegistration = async (req, res, next) => {
   const { email, password } = req.body;
@@ -16,13 +24,21 @@ const userRegistration = async (req, res, next) => {
     const salt = await bcrypt.genSalt();
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    const newUser = await User({ email, password: hashedPassword });
+    // Add generation random avatar for new users
+    const avatarURL = gravatar.url(email, { s: '250' });
+
+    const newUser = await User({
+      email,
+      password: hashedPassword,
+      avatarURL,
+    });
     await newUser.save();
 
     return res.status(201).json({
       user: {
         email: newUser.email,
         subscription: newUser.subscription,
+        avatarURL,
       },
     });
   } catch (error) {
@@ -66,7 +82,6 @@ const userLogin = async (req, res, next) => {
 
 const currentUser = async (req, res, next) => {
   try {
-    console.log('req.user :', req.user);
     if (!req.user) throw new Unauthorized('Not authorized');
     return res
       .status(200)
@@ -81,10 +96,6 @@ const userLogout = async (req, res, next) => {
 
   try {
     await User.findByIdAndUpdate(id, { token: null });
-
-    // if (!dbUser) throw new Unauthorized('Not authorized');
-    // dbUser.token = null;
-    // dbUser.save();
 
     return res.status(204).end();
   } catch (error) {
@@ -112,10 +123,38 @@ const updateSubscription = async (req, res, next) => {
   }
 };
 
+const updateUserAvatar = async (req, res, next) => {
+  const { path: tempDir, originalname } = req.file;
+  const { _id: id } = req.user;
+
+  const uniqueAvatarName = `${id}_${originalname}`;
+
+  try {
+    const resultPath = path.join(avatarsDir, uniqueAvatarName);
+
+    // use resize fn to change image size
+    await imgResize(tempDir, 250);
+    await fs.rename(tempDir, resultPath);
+
+    const avatarURL = path.join('public', 'avatars', uniqueAvatarName);
+
+    await User.findByIdAndUpdate(id, { avatarURL });
+
+    return res.status(200).json({
+      avatarURL,
+    });
+  } catch (error) {
+    await fs.unlink(tempDir);
+
+    next(error);
+  }
+};
+
 module.exports = {
   userRegistration,
   userLogin,
   currentUser,
   userLogout,
   updateSubscription,
+  updateUserAvatar,
 };

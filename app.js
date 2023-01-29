@@ -15,6 +15,7 @@ const formatsLogger = NODE_ENV === 'development' ? 'dev' : 'short';
 app.use(logger(formatsLogger));
 app.use(cors());
 app.use(express.json());
+app.use(express.static('public'));
 
 // Routes
 
@@ -28,7 +29,6 @@ app.use((req, res) => {
 
 // Error handling
 app.use((err, req, res, next) => {
-  // console.log('err.name: ', err.name);
   if (err.name === 'JsonWebTokenError' || err.name === 'UnauthorizedError') {
     return res.status(401).json({ message: 'Not authorized' });
   }
