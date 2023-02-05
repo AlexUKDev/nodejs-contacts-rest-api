@@ -16,6 +16,7 @@ const {
   userLogout,
   updateSubscription,
   updateUserAvatar,
+  verifyUserEmail,
 } = require('../../controllers/usersController');
 
 router.post('/signup', signupValidation, userRegistration);
@@ -23,6 +24,8 @@ router.post('/login', loginValidation, userLogin);
 
 router.get('/current', checkAuth, currentUser);
 router.get('/logout', checkAuth, userLogout);
+//  verify email route
+router.get('/verify/:verificationToken', verifyUserEmail);
 
 router.patch('/', checkAuth, updateSubscriptionValidation, updateSubscription);
 

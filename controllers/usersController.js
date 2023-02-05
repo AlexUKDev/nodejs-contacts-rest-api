@@ -1,13 +1,15 @@
 const gravatar = require('gravatar');
-const { Unauthorized } = require('http-errors');
+const { Unauthorized, NotFound } = require('http-errors');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const { nanoid } = require('nanoid');
 
 const { User } = require('../models/userModel');
 const { imgResize } = require('../helpers/imgResize');
 
 const path = require('path');
 const fs = require('fs/promises');
+const { sendConfirmMail } = require('../helpers/sendConfirmMail');
 
 const avatarsDir = path.join(__dirname, '../', 'public/avatars');
 
@@ -27,11 +29,24 @@ const userRegistration = async (req, res, next) => {
     // Add generation random avatar for new users
     const avatarURL = gravatar.url(email, { s: '250' });
 
+    // Creating verificationToken
+    const verificationToken = nanoid();
+
     const newUser = await User({
       email,
       password: hashedPassword,
       avatarURL,
+      verificationToken,
     });
+
+    // Creating and sending confirmation mail
+    const mail = {
+      to: email,
+      subject: 'Confirmation email',
+      html: `<a target='_blank' href='http://localhost:8000/api/users/verify/${verificationToken}'> <strong> Click on link to confirm your email </strong> </a>`,
+    };
+    sendConfirmMail(mail);
+
     await newUser.save();
 
     return res.status(201).json({
@@ -39,6 +54,7 @@ const userRegistration = async (req, res, next) => {
         email: newUser.email,
         subscription: newUser.subscription,
         avatarURL,
+        verificationToken,
       },
     });
   } catch (error) {
@@ -54,6 +70,11 @@ const userLogin = async (req, res, next) => {
 
     if (!dbUser)
       res.status(401).json({ message: 'Email or password is wrong' });
+
+    // Checking is the verified user email
+    if (!dbUser.verify) {
+      res.status(401).json({ message: 'Do not verified email' });
+    }
 
     const isPasswordValid = await bcrypt.compare(password, dbUser.password);
 
@@ -150,6 +171,27 @@ const updateUserAvatar = async (req, res, next) => {
   }
 };
 
+const verifyUserEmail = async (req, res, next) => {
+  const { verificationToken } = req.params;
+
+  try {
+    const user = await User.findOne({ verificationToken });
+
+    if (!user) {
+      throw NotFound();
+    }
+
+    await User.findByIdAndUpdate(user._id, {
+      verify: true,
+      verificationToken: null,
+    });
+
+    return res.status(200).json({ message: 'Verification success' });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   userRegistration,
   userLogin,
@@ -157,4 +199,5 @@ module.exports = {
   userLogout,
   updateSubscription,
   updateUserAvatar,
+  verifyUserEmail,
 };
