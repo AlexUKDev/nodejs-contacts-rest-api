@@ -9,7 +9,8 @@ const { imgResize } = require('../helpers/imgResize');
 
 const path = require('path');
 const fs = require('fs/promises');
-const { sendConfirmMail } = require('../helpers/sendConfirmMail');
+// const { sendConfirmMail } = require('../helpers/sendConfirmMail');
+const { sendMailSendGrid } = require('../helpers/sendMail');
 
 const avatarsDir = path.join(__dirname, '../', 'public/avatars');
 
@@ -45,7 +46,7 @@ const userRegistration = async (req, res, next) => {
       subject: 'Confirmation email',
       html: `<a target='_blank' href='http://localhost:8000/api/users/verify/${verificationToken}'> <strong> Click on link to confirm your email </strong> </a>`,
     };
-    sendConfirmMail(mail);
+    sendMailSendGrid(mail);
 
     await newUser.save();
 
@@ -66,34 +67,35 @@ const userLogin = async (req, res, next) => {
   const { email, password } = req.body;
 
   try {
-    const dbUser = await User.findOne({ email });
+    const user = await User.findOne({ email });
 
-    if (!dbUser)
-      res.status(401).json({ message: 'Email or password is wrong' });
+    if (!user) res.status(401).json({ message: 'Email or password is wrong' });
 
     // Checking is the verified user email
-    if (!dbUser.verify) {
+    if (!user.verify) {
       res.status(401).json({ message: 'Do not verified email' });
     }
 
-    const isPasswordValid = await bcrypt.compare(password, dbUser.password);
+    const isPasswordValid = await bcrypt.compare(password, user.password);
 
     if (!isPasswordValid)
       res.status(401).json({ message: 'Email or password is wrong' });
 
     const { JWT_SECRET } = process.env;
 
-    dbUser.token = jwt.sign({ id: dbUser._id }, JWT_SECRET, {
+    const token = await jwt.sign({ id: user._id }, JWT_SECRET, {
       expiresIn: '1h',
     });
 
-    dbUser.save();
+    await User.findByIdAndUpdate(user._id, {
+      token,
+    });
 
     return res.status(200).json({
-      token: dbUser.token,
+      token,
       user: {
-        email: dbUser.email,
-        subscription: dbUser.subscription,
+        email: user.email,
+        subscription: user.subscription,
       },
     });
   } catch (error) {

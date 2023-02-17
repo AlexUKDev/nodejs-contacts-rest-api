@@ -13,7 +13,7 @@ const sendMailSendGrid = async (configObj) => {
 
   try {
     await sendGridMail.send(msg);
-    console.log('Mail sended success ');
+    console.log(`Mail sended success to ${msg.to}`);
   } catch (error) {
     console.log(error);
   }
